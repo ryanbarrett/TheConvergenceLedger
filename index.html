@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CipherSig Generator • Convergence Ledger</title>
+  <style>
+    :root{
+      --bg:#0b0f17;           /* app background */
+      --panel:#121826;        /* panel */
+      --ink:#e5e7eb;          /* light text */
+      --muted:#94a3b8;        /* secondary text */
+      --accent:#22d3ee;       /* cyan (kept for UI only) */
+      --ok:#10b981;           /* green */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial;
+      background:linear-gradient(180deg,#0a0f18 0%, #0b1220 60%, #0a0f18 100%);
+      color:var(--ink);
+      display:flex; align-items:center; justify-content:center;
+      padding:24px;
+    }
+    .app{width:min(1100px,100%);}
+    .grid{display:grid; gap:16px; grid-template-columns: 1.2fr 1fr;}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+          border:1px solid rgba(148,163,184,.25); border-radius:16px; padding:18px; box-shadow:0 8px 30px rgba(0,0,0,.4)}
+    h1{font-size:22px; font-weight:700; margin:0 0 10px; letter-spacing:.5px}
+    h2{font-size:14px; font-weight:700; margin:0 0 8px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em}
+    label{font-size:13px; color:var(--muted)}
+    textarea,input,select,button{width:100%; border-radius:12px; border:1px solid rgba(148,163,184,.3); background:#0c1322; color:var(--ink); padding:10px 12px; font-size:14px}
+    textarea{min-height:92px; resize:vertical}
+    .row{display:flex; gap:10px}
+    .row > *{flex:1}
+    button{cursor:pointer; transition:.15s ease-in-out; font-weight:600}
+    .btn{background:linear-gradient(180deg,#0e1a2f,#0b1426); border:1px solid rgba(148,163,184,.35)}
+    .btn:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(34,211,238,.15)}
+    .btn-acc{background:linear-gradient(180deg,#1e3a5f,#0c2634); border-color:rgba(34,211,238,.55)}
+    .btn-ok{background:linear-gradient(180deg,#083826,#052a1b); border-color:rgba(16,185,129,.55)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .hint{font-size:12px; color:var(--muted)}
+    .idbox{display:flex; gap:8px; align-items:center}
+    .pill{padding:8px 10px; border-radius:10px; background:#0c1322; border:1px solid rgba(148,163,184,.25)}
+    canvas{width:100%; height:auto; background:transparent; image-rendering: pixelated;}
+    .footer{margin-top:10px; font-size:12px; color:var(--muted)}
+    @media (max-width: 980px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="grid">
+      <!-- Left column: Controls -->
+      <section class="card">
+        <h1>CipherSig Generator</h1>
+        <p class="hint">Generate a <strong>QR‑like, non‑QR</strong> glyph for your
+          <span title="Long-form wallet/account id">SpecterID</span> (wallet). Export as transparent PNG for your zine.
+        </p>
+
+        <h2>1 · Make a SpecterID (Wallet)</h2>
+        <label for="desc">From Item Description (hashed · SHA‑512 → base58)</label>
+        <textarea id="desc" placeholder="Paste the item/service description here… (Deterministic SpecterID)"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button id="btnFromDesc" class="btn btn-acc">Generate from Description</button>
+          <button id="btnRandom" class="btn">Random SpecterID</button>
+        </div>
+
+        <div style="margin-top:12px">
+          <label for="specter">SpecterID (editable)</label>
+          <div class="idbox">
+            <input id="specter" class="mono" spellcheck="false" />
+            <button id="btnCopy" class="btn" style="width:auto; white-space:nowrap">Copy</button>
+          </div>
+          <div class="hint" style="margin-top:6px">Format: <span class="mono">SPECTER-</span> + long base58 string. You can edit this, the glyph updates live.</div>
+        </div>
+
+        <h2 style="margin-top:18px">2 · Style & Options</h2>
+        <div class="row">
+          <div>
+            <label>Grid Size</label>
+            <select id="gridSize">
+              <option>29</option><option selected>33</option><option>37</option><option>41</option><option>45</option>
+            </select>
+          </div>
+          <div>
+            <label>Module Size (px)</label>
+            <input id="module" type="number" min="4" max="32" value="10" />
+          </div>
+          <div>
+            <label>Quiet Zone (modules)</label>
+            <input id="quiet" type="number" min="0" max="12" value="4" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div>
+            <label>Foreground</label>
+            <input id="fg" type="color" value="#e5e7eb" />
+          </div>
+          <div>
+            <label>Glitch</label>
+            <select id="glitch">
+              <option value="0">Off</option>
+              <option value="1" selected>Subtle</option>
+              <option value="2">Strong</option>
+            </select>
+          </div>
+          <div>
+            <label>Symbol Set</label>
+            <select id="symset">
+              <option value="dots" selected>Classic Dots</option>
+              <option value="mix">Mixed Symbols</option>
+              <option value="runes">Micro Runes</option>
+            </select>
+          </div>
+        </div>
+
+        <h2 style="margin-top:18px">3 · Render & Export</h2>
+        <div class="row">
+          <button id="btnRender" class="btn btn-ok">Render CipherSig</button>
+          <button id="btnDownload" class="btn">Download PNG</button>
+        </div>
+        <div class="footer">Note: This is not a QR code and is not intended to be machine‑readable. It’s a stylistic, deterministic glyph. (No blue scribbles.)</div>
+      </section>
+
+      <!-- Right column: Preview -->
+      <section class="card">
+        <h2>Preview</h2>
+        <canvas id="canvas" width="1024" height="1024" aria-label="CipherSig canvas"></canvas>
+        <div class="pill mono" id="info" style="margin-top:10px; overflow:auto; max-height:120px"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+  // ===== Utilities =====
+  const $ = sel => document.querySelector(sel);
+  const enc = new TextEncoder();
+
+  // Base58 alphabet (Bitcoin)
+  const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  function toBase58(bytes){
+    let digits = [0];
+    for (let i=0;i<bytes.length;i++){
+      let carry = bytes[i];
+      for (let j=0;j<digits.length;j++){
+        const x = (digits[j] << 8) + carry;
+        digits[j] = x % 58;
+        carry = (x / 58) | 0;
+      }
+      while (carry){ digits.push(carry % 58); carry = (carry / 58) | 0; }
+    }
+    for (let k=0;k<bytes.length && bytes[k]===0; k++) digits.push(0);
+    return digits.reverse().map(d => B58[d]).join("");
+  }
+
+  async function hashBytes(message){
+    if (window.crypto?.subtle){
+      try{
+        const buf = await crypto.subtle.digest('SHA-512', enc.encode(message));
+        return new Uint8Array(buf);
+      }catch(e){/* fallthrough to SHA-256 */}
+      const buf = await crypto.subtle.digest('SHA-256', enc.encode(message));
+      return new Uint8Array(buf);
+    }
+    // ultra-fallback (not strong)
+    let h1 = 0xCBF29CE4 ^ 0, h2 = 0x84222325 ^ 0;
+    for (const ch of message){ const c = ch.charCodeAt(0); h1 ^= c; h1 = (h1 * 0x01000193) >>> 0; h2 ^= (c<<1); h2 = (h2 * 0x01000193) >>> 0; }
+    const out = new Uint8Array(64);
+    for (let i=0;i<64;i++){ h1 = (h1 ^ (h2<<5))>>>0; h2 = (h2 ^ (h1>>>7))>>>0; out[i]= (h1 ^ h2) & 0xff; }
+    return out;
+  }
+
+  async function specterFromDescription(desc){
+    const bytes = await hashBytes(desc.trim());
+    const b58 = toBase58(bytes);
+    return `SPECTER-${b58}`;
+  }
+
+  function randomSpecter(){
+    const bytes = crypto.getRandomValues(new Uint8Array(64));
+    return `SPECTER-${toBase58(bytes)}`;
+  }
+
+  // xorshift32 PRNG seeded from 4 bytes
+  function PRNG(seed){ let x = seed >>> 0; if (!x) x = 0x6D2B79F5; return function(){ x ^= x<<13; x ^= x>>>17; x ^= x<<5; return (x>>>0) / 0xFFFFFFFF; }; }
+  function bytesToSeed(bytes){ return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | (bytes[3] << 0); }
+
+  // ===== Symbol helpers =====
+  function drawSymbol(ctx, kind, cx, cy, m, color){
+    const r = m*0.32;
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.lineWidth = Math.max(1, Math.floor(m/8));
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    switch(kind){
+      case 'dot':
+        ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); break;
+      case 'square':
+        ctx.beginPath(); ctx.rect(-r,-r,2*r,2*r); ctx.fill(); break;
+      case 'triangle':
+        ctx.beginPath(); ctx.moveTo(0,-r); ctx.lineTo(r, r); ctx.lineTo(-r, r); ctx.closePath(); ctx.fill(); break;
+      case 'diamond':
+        ctx.beginPath(); ctx.moveTo(0,-r); ctx.lineTo(r,0); ctx.lineTo(0,r); ctx.lineTo(-r,0); ctx.closePath(); ctx.fill(); break;
+      case 'plus':
+        const t = Math.max(1, Math.floor(m/7));
+        ctx.beginPath(); ctx.rect(-t*0.5,-r, t, 2*r); ctx.rect(-r,-t*0.5, 2*r, t); ctx.fill(); break;
+      case 'x':
+        ctx.rotate(Math.PI/4);
+        const w = Math.max(1, Math.floor(m/7));
+        ctx.beginPath(); ctx.rect(-w*0.5,-r, w, 2*r); ctx.rotate(Math.PI/2); ctx.rect(-w*0.5,-r, w, 2*r); ctx.fill(); break;
+      case 'hollow':
+        ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.lineWidth = Math.max(1,Math.floor(m/6)); ctx.stroke(); break;
+    }
+    ctx.restore();
+  }
+
+  function symbolFromIndex(set, idx){
+    if (set==='dots') return 'dot';
+    const mix = ['dot','square','triangle','diamond','plus','x','hollow'];
+    return mix[idx % mix.length];
+  }
+
+  // ===== Glyph Renderer =====
+  async function renderGlyph(canvas, specter, opts){
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const {grid, module, quiet, fg, glitchLevel, symset} = opts;
+    const total = grid + quiet*2;
+    canvas.width = canvas.height = total * module;
+
+    // Derive bytes from SpecterID for deterministic pattern
+    const bytes = await hashBytes(specter);
+    const seed = bytesToSeed(bytes);
+    const rnd = PRNG(seed);
+
+    // Boolean matrix with symmetry & anchors
+    const m = Array.from({length:grid},()=>Array(grid).fill(false));
+
+    // Finder-like anchors as dot rings (no scribbles)
+    const anchors = [ {r:2,c:2}, {r:2,c:grid-9+2}, {r:grid-9+2,c:2} ];
+    const placeAnchor = (r,c)=>{
+      for (let i=0;i<7;i++) for (let j=0;j<7;j++){
+        const rr=r+i, cc=c+j; if (rr<0||cc<0||rr>=grid||cc>=grid) continue;
+        const edge = i===0||i===6||j===0||j===6;
+        const ring = (i===2||i===4||j===2||j===4) && !(i===0||i===6||j===0||j===6);
+        m[rr][cc] = edge || (ring && ((i+j)%2===0));
+      }
+    };
+    anchors.forEach(a=>placeAnchor(a.r,a.c));
+
+    // Core fill: mirror left->right, add diagonal bias from bytes
+    const bias = bytes[8] % grid;
+    for (let r=0;r<grid;r++){
+      for (let c=0;c<Math.ceil(grid/2);c++){
+        if (m[r][c]){ m[r][grid-1-c]=m[r][c]; continue; }
+        let v = rnd() < 0.5;
+        if (((r+c+bias)%5)===0) v = !v; // diagonal weave
+        // keep clear around anchors by 1 cell
+        if ((r<9 && c<9) || (r<9 && grid-1-c<9) || (r>grid-10 && c<9)) v = m[r][c];
+        m[r][c]=v; m[r][grid-1-c]=v;
+      }
+    }
+
+    // Glitch overlay: flip random cells depending on level
+    const flips = glitchLevel===2? Math.floor(grid*grid*0.06)
+               : glitchLevel===1? Math.floor(grid*grid*0.02)
+               : 0;
+    for (let k=0;k<flips;k++){
+      const r = Math.floor(rnd()*grid), c = Math.floor(rnd()*grid);
+      if ((r<9 && c<9) || (r<9 && c>grid-10) || (r>grid-10 && c<9)) continue;
+      m[r][c] = !m[r][c];
+    }
+
+    // Draw modules as symbols
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(quiet*module, quiet*module);
+
+    for (let r=0;r<grid;r++){
+      for (let c=0;c<grid;c++){
+        if (!m[r][c]) continue;
+        const cx = c*module + module/2;
+        const cy = r*module + module/2;
+        // Deterministic symbol selection from hash + coords
+        const idx = (bytes[(r*grid+c) % bytes.length] + r*17 + c*31) & 0xff;
+        const kind = symbolFromIndex(symset, idx);
+        drawSymbol(ctx, kind, cx, cy, module, fg);
+      }
+    }
+
+    return {seed, grid, module, quiet};
+  }
+
+  // ===== Wiring =====
+  const els = {
+    desc: $('#desc'),
+    btnFromDesc: $('#btnFromDesc'),
+    btnRandom: $('#btnRandom'),
+    specter: $('#specter'),
+    btnCopy: $('#btnCopy'),
+    gridSize: $('#gridSize'),
+    module: $('#module'),
+    quiet: $('#quiet'),
+    fg: $('#fg'),
+    glitch: $('#glitch'),
+    symset: $('#symset'),
+    btnRender: $('#btnRender'),
+    btnDownload: $('#btnDownload'),
+    canvas: $('#canvas'),
+    info: $('#info'),
+  };
+
+  function opts(){
+    return {
+      grid: parseInt(els.gridSize.value,10),
+      module: parseInt(els.module.value,10),
+      quiet: parseInt(els.quiet.value,10),
+      fg: els.fg.value,
+      glitchLevel: parseInt(els.glitch.value,10),
+      symset: els.symset.value
+    };
+  }
+
+  async function update(){
+    const spec = els.specter.value.trim();
+    if (!spec){ return; }
+    const meta = await renderGlyph(els.canvas, spec, opts());
+    els.info.textContent = `SpecterID: ${spec}\nSeed: 0x${meta.seed.toString(16)}  ·  Grid: ${meta.grid}  ·  Module: ${meta.module}px  ·  Quiet: ${meta.quiet}`;
+  }
+
+  els.btnFromDesc.addEventListener('click', async ()=>{
+    const d = els.desc.value.trim();
+    if (!d){ alert('Paste an item/service description first.'); return; }
+    els.specter.value = await specterFromDescription(d);
+    update();
+  });
+
+  els.btnRandom.addEventListener('click', ()=>{ els.specter.value = randomSpecter(); update(); });
+  els.specter.addEventListener('input', update);
+  els.gridSize.addEventListener('change', update);
+  els.module.addEventListener('change', update);
+  els.quiet.addEventListener('change', update);
+  els.fg.addEventListener('change', update);
+  els.glitch.addEventListener('change', update);
+  els.symset.addEventListener('change', update);
+  els.btnRender.addEventListener('click', update);
+
+  els.btnCopy.addEventListener('click', async ()=>{
+    try{ await navigator.clipboard.writeText(els.specter.value.trim()); els.btnCopy.textContent = 'Copied'; setTimeout(()=> els.btnCopy.textContent='Copy', 1200);}catch{ /* ignore */ }
+  });
+
+  els.btnDownload.addEventListener('click', ()=>{
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g,'');
+    a.download = `ciphersig_${ts}.png`;
+    a.href = els.canvas.toDataURL('image/png');
+    a.click();
+  });
+
+  // Init with a random SpecterID
+  els.specter.value = randomSpecter();
+  update();
+  </script>
+</body>
+</html>
