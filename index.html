@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CipherSig Generator • Convergence Ledger</title>
+  <title>Wallet Signature Generator • Convergence Ledger</title>
   <style>
     :root{
       --bg:#0b0f17;           /* app background */
@@ -12,6 +12,8 @@
       --muted:#94a3b8;        /* secondary text */
       --accent:#22d3ee;       /* cyan (kept for UI only) */
       --ok:#10b981;           /* green */
+      --glow:#22d3ee22;       /* subtle glow */
+      --border:#1e293b;       /* darker borders */
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -19,32 +21,42 @@
       margin:0; font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial;
       background:linear-gradient(180deg,#0a0f18 0%, #0b1220 60%, #0a0f18 100%);
       color:var(--ink);
-      display:flex; align-items:center; justify-content:center;
-      padding:24px;
+      display:flex; align-items:stretch; justify-content:center;
+      padding:16px;
+      min-height:100vh;
     }
-    .app{width:min(1100px,100%);}
-    .grid{display:grid; gap:16px; grid-template-columns: 1.2fr 1fr;}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
-          border:1px solid rgba(148,163,184,.25); border-radius:16px; padding:18px; box-shadow:0 8px 30px rgba(0,0,0,.4)}
-    h1{font-size:22px; font-weight:700; margin:0 0 10px; letter-spacing:.5px}
+    .app{width:min(1200px,100%); max-width:100%; display:flex; flex-direction:column;}
+    .grid{display:grid; gap:16px; grid-template-columns: 1.2fr 1fr; flex:1; align-items:start;}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+          border:1px solid var(--border); border-radius:16px; padding:18px; 
+          box-shadow:0 8px 30px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08);
+          backdrop-filter:blur(8px);}
+    h1{font-size:22px; font-weight:700; margin:0 0 10px; letter-spacing:.5px; 
+       text-shadow:0 0 20px var(--glow); color:var(--accent);}
     h2{font-size:14px; font-weight:700; margin:0 0 8px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em}
     label{font-size:13px; color:var(--muted)}
-    textarea,input,select,button{width:100%; border-radius:12px; border:1px solid rgba(148,163,184,.3); background:#0c1322; color:var(--ink); padding:10px 12px; font-size:14px}
+    textarea,input,select,button{width:100%; border-radius:12px; border:1px solid var(--border); 
+                                  background:rgba(12,19,34,.8); color:var(--ink); padding:10px 12px; font-size:14px;
+                                  backdrop-filter:blur(4px);}
     textarea{min-height:92px; resize:vertical}
     .row{display:flex; gap:10px}
     .row > *{flex:1}
     button{cursor:pointer; transition:.15s ease-in-out; font-weight:600}
-    .btn{background:linear-gradient(180deg,#0e1a2f,#0b1426); border:1px solid rgba(148,163,184,.35)}
-    .btn:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(34,211,238,.15)}
+    .btn{background:linear-gradient(180deg,#0e1a2f,#0b1426); border:1px solid var(--border);
+         box-shadow:0 2px 8px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.1);}
+    .btn:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(34,211,238,.15), 0 0 30px var(--glow);}
     .btn-acc{background:linear-gradient(180deg,#1e3a5f,#0c2634); border-color:rgba(34,211,238,.55)}
     .btn-ok{background:linear-gradient(180deg,#083826,#052a1b); border-color:rgba(16,185,129,.55)}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     .hint{font-size:12px; color:var(--muted)}
     .idbox{display:flex; gap:8px; align-items:center}
-    .pill{padding:8px 10px; border-radius:10px; background:#0c1322; border:1px solid rgba(148,163,184,.25)}
+    .pill{padding:8px 10px; border-radius:10px; background:rgba(12,19,34,.8); 
+          border:1px solid var(--border); backdrop-filter:blur(4px);
+          box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
     canvas{width:100%; height:auto; background:transparent; image-rendering: pixelated;}
     .footer{margin-top:10px; font-size:12px; color:var(--muted)}
-    @media (max-width: 980px){.grid{grid-template-columns:1fr}}
+    @media (max-width: 980px){.grid{grid-template-columns:1fr; gap:12px} body{padding:12px}}
+    @media (max-height: 600px){body{align-items:flex-start; padding-top:8px}}
   </style>
 </head>
 <body>
@@ -52,17 +64,15 @@
     <div class="grid">
       <!-- Left column: Controls -->
       <section class="card">
-        <h1>CipherSig Generator</h1>
-        <p class="hint">Generate a <strong>QR‑like, non‑QR</strong> glyph for your
-          <span title="Long-form wallet/account id">SpecterID</span> (wallet). Export as transparent PNG for your zine.
-        </p>
+        <h1>Wallet Signature Generator</h1>
+        <p class="hint">Create your unique <strong>Convergence wallet signature</strong> - a visual identity for your SpecterID. Perfect for catalogs, business cards, and mesh transactions.</p>
 
-        <h2>1 · Make a SpecterID (Wallet)</h2>
-        <label for="desc">From Item Description (hashed · SHA‑512 → base58)</label>
-        <textarea id="desc" placeholder="Paste the item/service description here… (Deterministic SpecterID)"></textarea>
+        <h2>1 · Create Your Wallet</h2>
+        <label for="desc">Generate from Business/Service Description</label>
+        <textarea id="desc" placeholder="Describe your business, service, or item to generate a deterministic wallet address..."></textarea>
         <div class="row" style="margin-top:8px">
-          <button id="btnFromDesc" class="btn btn-acc">Generate from Description</button>
-          <button id="btnRandom" class="btn">Random SpecterID</button>
+          <button id="btnFromDesc" class="btn btn-acc">Create Business Wallet</button>
+          <button id="btnRandom" class="btn">Generate Personal Wallet</button>
         </div>
 
         <div style="margin-top:12px">
@@ -71,10 +81,10 @@
             <input id="specter" class="mono" spellcheck="false" />
             <button id="btnCopy" class="btn" style="width:auto; white-space:nowrap">Copy</button>
           </div>
-          <div class="hint" style="margin-top:6px">Format: <span class="mono">SPECTER-</span> + long base58 string. You can edit this, the glyph updates live.</div>
+          <div class="hint" style="margin-top:6px">Your unique Convergence address. Edit to customize - signature updates instantly.</div>
         </div>
 
-        <h2 style="margin-top:18px">2 · Style & Options</h2>
+        <h2 style="margin-top:18px">2 · Customize Signature</h2>
         <div class="row">
           <div>
             <label>Grid Size</label>
@@ -114,18 +124,18 @@
           </div>
         </div>
 
-        <h2 style="margin-top:18px">3 · Render & Export</h2>
+        <h2 style="margin-top:18px">3 · Generate & Export</h2>
         <div class="row">
-          <button id="btnRender" class="btn btn-ok">Render CipherSig</button>
+          <button id="btnRender" class="btn btn-ok">Generate Signature</button>
           <button id="btnDownload" class="btn">Download PNG</button>
         </div>
-        <div class="footer">Note: This is not a QR code and is not intended to be machine‑readable. It’s a stylistic, deterministic glyph. (No blue scribbles.)</div>
+        <div class="footer">Your wallet signature is a unique visual identity for transactions on the Convergence network.</div>
       </section>
 
       <!-- Right column: Preview -->
       <section class="card">
-        <h2>Preview</h2>
-        <canvas id="canvas" width="1024" height="1024" aria-label="CipherSig canvas"></canvas>
+        <h2>Your Wallet Signature</h2>
+        <canvas id="canvas" width="1024" height="1024" aria-label="Wallet signature canvas"></canvas>
         <div class="pill mono" id="info" style="margin-top:10px; overflow:auto; max-height:120px"></div>
       </section>
     </div>
