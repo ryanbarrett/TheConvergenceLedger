@@ -128,3 +128,27 @@ Forget banks, middlemen, and centralized choke points — you pay the thing, and
 > No waiting, no middleman. Just send the Impulse, and it happens.”
 
 ---
+
+## 10 ▪ Currency
+
+The Convergence Ledger’s native unit of exchange is designed for speed, micro-transactions, and instant settlement across the **Axiom Mesh**.
+
+| Type       | Name         | Description |
+|------------|--------------|-------------|
+| **Ticker** | **CVX**      | Formal three-letter symbol derived from “Convergence.” Used in ledgers, exchanges, and BindScripts. |
+| **Ticker** | **IMP**      | Alternate symbol from “Impulse” in *ImpulseCast*. Common in technical documentation and channel protocols. |
+| **Slang**  | **shards**   | Everyday street term for small divisible units of CVX. “That’ll be 12 shards.” |
+| **Slang**  | **specters** | Gritty mesh slang tied to *SpecterID*. “Send me 20 specters and we’re good.” |
+| **Slang**  | **divs**     | From *Flow Dividend*. Often used when talking about UBI payouts. |
+| **Slang**  | **casts**    | Short for “ImpulseCast” — “Casting” value to someone. |
+| **Slang**  | **meshbits** | Network-native micro-units, smallest measurable fragment of CVX. |
+
+**Conversion**  
+- **1 CVX** = 1,000 shards = 1,000,000 meshbits  
+- Slang terms are informal and context-driven; BindScripts and formal contracts always denominate in CVX.
+
+**Usage**  
+- CVX flows across the mesh in real time, settling into **NodeKeys** via **ImpulseCast** channels.  
+- BindScripts can split, lock, or route CVX automatically, enabling complex financial flows without intermediaries.
+
+---
